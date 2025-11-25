@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateRequest } from 'zod-express-middleware';
-import { WeatherData, WeatherDataSchema, WeatherFilterSchema } from './dto.js';
+import { WeatherData, WeatherDataSchema, WeatherDataBatchSchema, WeatherFilterSchema } from './dto.js';
 import WeatherService from './service.js';
 import logger from '../logger.js';
 
@@ -14,6 +14,22 @@ router.post(
 
     try {
       await WeatherService.addData(data);
+    } catch (error) {
+      logger.error(error);
+      return res.sendStatus(500);
+    }
+    return res.sendStatus(200);
+  }
+);
+
+router.post(
+  '/data/batch',
+  validateRequest({ body: WeatherDataBatchSchema }),
+  async (req, res) => {
+    const dataArray = req.body;
+
+    try {
+      await WeatherService.addDataBatch(dataArray);
     } catch (error) {
       logger.error(error);
       return res.sendStatus(500);

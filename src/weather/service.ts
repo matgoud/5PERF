@@ -1,76 +1,80 @@
 import repositoryInstance, { WeatherDataRepository } from './repository.js';
 import { WeatherData, WeatherFilter } from './dto.js';
-import dayjs from 'dayjs';
+import SimpleCache from '../cache.js';
 
 export class WeatherService {
   private weatherRepository: WeatherDataRepository;
+  private dataCache: SimpleCache<WeatherData[] | null>;
+  private statsCache: SimpleCache<number | null>;
+
   constructor() {
     this.weatherRepository = repositoryInstance;
+    this.dataCache = new SimpleCache<WeatherData[] | null>(300);
+    this.statsCache = new SimpleCache<number | null>(300);
   }
 
   async addData(data: WeatherData) {
+    this.dataCache.clear();
+    this.statsCache.clear();
     return this.weatherRepository.insertWeatherData(data);
   }
 
+  async addDataBatch(dataArray: WeatherData[]) {
+    this.dataCache.clear();
+    this.statsCache.clear();
+    return this.weatherRepository.insertWeatherDataBatch(dataArray);
+  }
+
   async getData(location: string, options: WeatherFilter) {
-    const { from, to } = options;
-    const data = await this.weatherRepository.getWeatherDataByLocation(
-      location
-    );
-    if (data === null) {
-      return null;
+    const cacheKey = this.dataCache.generateKey('data', location, options.from, options.to);
+    const cached = this.dataCache.get(cacheKey);
+    
+    if (cached !== null) {
+      return cached;
     }
-    return data.filter((datum) => {
-      if (
-        from &&
-        (dayjs(from).isAfter(datum.date) || dayjs(from).isSame(datum.date))
-      ) {
-        return false;
-      }
-      if (to && dayjs(to).isBefore(datum.date)) {
-        return false;
-      }
-      return true;
-    });
+
+    const data = await this.weatherRepository.getWeatherDataByLocation(location, options);
+    this.dataCache.set(cacheKey, data);
+    return data;
   }
 
   async getMean(location: string, options: WeatherFilter) {
-    const data = await this.getData(location, options);
-    if (data === null) {
-      return null;
+    const cacheKey = this.statsCache.generateKey('mean', location, options.from, options.to);
+    const cached = this.statsCache.get(cacheKey);
+    
+    if (cached !== null) {
+      return cached;
     }
-    const mean =
-      data
-        .map((datum) => datum.temperature)
-        .reduce((acc, current) => acc + current, 0.0) / data.length;
 
+    const mean = await this.weatherRepository.getMean(location, options);
+    this.statsCache.set(cacheKey, mean);
     return mean;
   }
 
   async getMax(location: string, options: WeatherFilter) {
-    const data = await this.getData(location, options);
-
-    if (data === null) {
-      return null;
+    const cacheKey = this.statsCache.generateKey('max', location, options.from, options.to);
+    const cached = this.statsCache.get(cacheKey);
+    
+    if (cached !== null) {
+      return cached;
     }
-    const mean = data
-      .map((datum) => datum.temperature)
-      .reduce((acc, current) => Math.max(acc, current), data[0].temperature);
 
-    return mean;
+    const max = await this.weatherRepository.getMax(location, options);
+    this.statsCache.set(cacheKey, max);
+    return max;
   }
 
   async getMin(location: string, options: WeatherFilter) {
-    const data = await this.getData(location, options);
-
-    if (data === null) {
-      return null;
+    const cacheKey = this.statsCache.generateKey('min', location, options.from, options.to);
+    const cached = this.statsCache.get(cacheKey);
+    
+    if (cached !== null) {
+      return cached;
     }
-    const mean = data
-      .map((datum) => datum.temperature)
-      .reduce((acc, current) => Math.min(acc, current), data[0].temperature);
 
-    return mean;
+    const min = await this.weatherRepository.getMin(location, options);
+    this.statsCache.set(cacheKey, min);
+    return min;
   }
 }
 
