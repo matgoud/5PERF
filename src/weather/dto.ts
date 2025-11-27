@@ -20,4 +20,9 @@ export const WeatherFilterSchema = z.object({
   offset: z.coerce.number().min(0).optional().default(0),
 });
 
-export type WeatherFilter = z.infer<typeof WeatherFilterSchema>;
+export type WeatherFilter = {
+  from?: Date;
+  to?: Date;
+  limit?: number;
+  offset?: number;
+};

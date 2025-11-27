@@ -1,8 +1,8 @@
-import morgan, { Options, StreamOptions } from 'morgan';
+import morgan, { StreamOptions } from 'morgan';
 import logger from './logger.js';
-import config from 'config';
+import config from './config.js';
 
-const logFormat = config.get<string>('api.logFormat');
+const logFormat = config.get('api.logFormat') as string;
 
 const stream: StreamOptions = {
   write: (log: string) => {

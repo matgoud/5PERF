@@ -30,24 +30,73 @@ Cette application a été optimisée pour une récupération et une analyse de d
 
 ## Utilisation
 
-Les paramètres de configuration peuvent être définis par environnement dans le répertoire `/config`. Voir la [documentation de `config`](https://www.npmjs.com/package/config).
+Les paramètres de configuration peuvent être définis par environnement dans le répertoire `/config`.
 
-- Installer les dépendances
+### Prérequis
+
+- Node.js 20.x
+- Docker Desktop (pour PostgreSQL)
+
+### Installation et lancement
+
+1. **Installer les dépendances**
+
+   ```sh
+   npm install
+   ```
+
+2. **Démarrer Docker Desktop**
+
+   Assurez-vous que Docker Desktop est lancé et opérationnel.
+
+3. **Démarrer la base de données PostgreSQL**
+
+   Si c'est la première fois :
+
+   ```sh
+   docker run --name weather-db \
+    -e POSTGRES_USER=WeatherTrack \
+    -e POSTGRES_PASSWORD=mysecretpassword \
+    -e POSTGRES_DB=WeatherTrack \
+    -p 5432:5432 \
+    -d \
+    postgres:16-alpine
+   ```
+
+   Si le conteneur existe déjà :
+
+   ```sh
+   docker start weather-db
+   ```
+
+4. **Compiler et lancer l'application**
+
+   ```sh
+   npm run build && node dist/src/index.js
+   ```
+
+   L'application démarre sur http://localhost:3000
+
+### Commandes disponibles
+
+- **Build** : Compiler le projet TypeScript
 
   ```sh
-  npm install
+  npm run build
   ```
 
-- Lancer le projet
+- **Start** : Lancer l'application (nécessite Node.js 20.x avec ts-node)
 
   ```sh
   npm start
   ```
 
-- Lancer le projet en mode watch/inspect
+  **Note** : En raison d'incompatibilités avec les ES modules et ts-node, il est recommandé d'utiliser `npm run build && node dist/src/index.js` à la place.
+
+- **Tests** : Exécuter les tests
 
   ```sh
-  npm run start:watch
+  npm test
   ```
 
 ## Description de l'API
@@ -213,18 +262,21 @@ CREATE TABLE weather (
 CREATE INDEX idx_weather_location_date ON weather(location, date);
 ```
 
-## Dépendances d'infrastructure en local
+## Test rapide de l'API
 
-### `postgres:16`
+Une fois l'application lancée, vous pouvez tester les endpoints :
 
 ```sh
-docker run --name weather-db \
- -e POSTGRES_USER=WeatherTrack \
- -e POSTGRES_PASSWORD=mysecretpassword \
- -e POSTGRES_DB=WeatherTrack \
- -p 5432:5432 \
- -d \
- postgres:16-alpine
+# Insérer une donnée météo
+curl -X POST http://localhost:3000/weather/data \
+  -H "Content-Type: application/json" \
+  -d '{"location":"Lyon","date":"2023-12-24T23:00:00.000Z","temperature":25,"humidity":40}'
+
+# Récupérer les données
+curl http://localhost:3000/weather/data/Lyon
+
+# Obtenir la température moyenne
+curl http://localhost:3000/weather/avg/Lyon
 ```
 
 ## Migration de DATE vers TIMESTAMP
@@ -239,25 +291,33 @@ psql -U WeatherTrack -d WeatherTrack -f migration_date_to_timestamp.sql
 
 ```
 src/
+├── config.ts             # Module de configuration personnalisé (ES modules compatible)
 ├── cache.ts              # Cache en mémoire avec TTL
+├── logger.ts             # Configuration Winston pour les logs
+├── apiLogger.ts          # Middleware Morgan pour les logs HTTP
 ├── weather/
 │   ├── controller.ts     # Endpoints REST API
 │   ├── service.ts        # Logique métier avec cache
 │   ├── repository.ts     # Couche d'accès aux données
-│   └── dto.ts            # Schémas de validation
+│   └── dto.ts            # Schémas de validation Zod
+├── app.ts                # Configuration Express de base
 ├── server.ts             # Serveur Express avec compression
 └── index.ts              # Point d'entrée de l'application
+config/
+├── default.yaml          # Configuration par défaut
+└── production.yaml       # Configuration de production
 ```
 
 ## Stack Technique
 
-- **Runtime** : Node.js 20.10.0
-- **Langage** : TypeScript
+- **Runtime** : Node.js 20.x
+- **Langage** : TypeScript 5.3.3
 - **Framework** : Express 4.18.2
 - **Base de Données** : PostgreSQL 16
 - **Validation** : Zod 3.22.4
+- **Configuration** : js-yaml 4.1.1 (custom ES module wrapper)
 - **Compression** : compression 1.7.4
-- **Logging** : Winston 3.11.0
+- **Logging** : Winston 3.11.0 + Morgan 1.10.0
 
 ## Résumé des Optimisations Implémentées
 

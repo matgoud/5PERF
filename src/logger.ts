@@ -1,5 +1,5 @@
 import winston from 'winston';
-import config from 'config';
+import config from './config.js';
 
 const consoleLTransport = new winston.transports.Console({
   level: config.get('logLevel'),

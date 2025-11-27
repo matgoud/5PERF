@@ -1,4 +1,4 @@
-import config from 'config';
+import config from './config.js';
 import logger from './logger.js';
 import server from './server.js';
 import WeatherDataRepository from './weather/repository.js';
@@ -13,7 +13,7 @@ process.on('uncaughtException', (error) => {
   logger.error('Got uncaught exception', error);
   process.exit(1);
 });
-const port = config.get<number>('api.port');
+const port = config.get('api.port') as number;
 
 await WeatherDataRepository.createTable();
 

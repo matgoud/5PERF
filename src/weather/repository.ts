@@ -1,8 +1,8 @@
 import pg from 'pg';
-import config from 'config';
-import { WeatherData, WeatherDataSchema, WeatherFilter } from './dto.js';
+import config from '../config.js';
+import { WeatherData, WeatherFilter } from './dto.js';
 
-const poolConfig = config.get<pg.PoolConfig>('database');
+const poolConfig = config.get('database') as pg.PoolConfig;
 
 export class WeatherDataRepository {
   private pool: pg.Pool;
